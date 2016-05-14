@@ -9,18 +9,13 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.widget.TextViewCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.AdapterView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -30,7 +25,6 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
-import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
@@ -40,6 +34,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
 
     private final static String TAG = "MainActivity";
+    private final static int REFRESH_MS = 500;
 
     private GoogleMap mGoogleMap;
     private Menu mOptionsMenu;
@@ -50,7 +45,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private int markerCount = 0;
     private Location locationPrevious;
+
+    private double stepDistance;
     private double totalDistance;
+    private double wpDistance;
+    private double cResetDistance;
+
 
     private Polyline mPolyline;
     private PolylineOptions mPolylineOptions;
@@ -58,6 +58,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private TextView textViewWPCount;
     private TextView textViewSpeed;
+    private TextView textViewCResetDistance;
+    private TextView textViewWPDistance;
+    private TextView textViewTotalDistance;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -100,6 +103,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         textViewWPCount = (TextView) findViewById(R.id.textview_wpcount);
         textViewSpeed = (TextView) findViewById(R.id.textview_speed);
+
+        textViewCResetDistance = (TextView)findViewById(R.id.textview_creset_distance);
+        textViewWPDistance = (TextView)findViewById(R.id.textview_wp_distance);
+        textViewTotalDistance = (TextView)findViewById(R.id.textview_total_distance);
     }
 
     @Override
@@ -264,12 +271,16 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         markerCount++;
 
+        wpDistance =0;
+        updateTextViewWPDistance();
+
         mGoogleMap.addMarker(new MarkerOptions().position(new LatLng(locationPrevious.getLatitude(), locationPrevious.getLongitude())).title(Integer.toString(markerCount)));
         textViewWPCount.setText(Integer.toString(markerCount));
     }
 
     public void buttonCResetClicked(View view){
-
+        cResetDistance =0;
+        updateTextViewCResetDistance();
     }
 
     @Override
@@ -312,6 +323,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             mPolyline.setPoints(points);
         }
 
+        stepDistance=locationPrevious.distanceTo(location);
+        updateSpeed();
+
+        totalDistance+=stepDistance;
+        cResetDistance +=stepDistance;
+        wpDistance +=stepDistance;
+        updateAllDistanceTextViews();
+
         locationPrevious = location;
     }
 
@@ -343,7 +362,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         if (locationManager!=null){
-            locationManager.requestLocationUpdates(provider, 500, 1, this);
+            locationManager.requestLocationUpdates(provider, REFRESH_MS, 1, this);
         }
     }
 
@@ -363,4 +382,25 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
     }
 
+    private void updateAllDistanceTextViews(){
+        updateTextViewCResetDistance();
+        updateTextViewWPDistance();
+        updateTextViewTotalDistance();
+    }
+
+    private void updateTextViewCResetDistance() {
+        textViewCResetDistance.setText(String.valueOf(Math.round(cResetDistance)));
+    }
+
+    private void updateTextViewWPDistance() {
+        textViewWPDistance.setText(String.valueOf(Math.round(wpDistance)));
+    }
+
+    private void updateTextViewTotalDistance() {
+        textViewTotalDistance.setText(String.valueOf(Math.round(totalDistance)));
+    }
+
+    private void updateSpeed() {
+        textViewSpeed.setText(String.valueOf(Math.round(stepDistance/(REFRESH_MS * 0.001))));
+    }
 }
