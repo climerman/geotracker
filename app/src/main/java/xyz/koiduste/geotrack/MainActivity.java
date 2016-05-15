@@ -1,10 +1,13 @@
 package xyz.koiduste.geotrack;
 
 import android.Manifest;
+import android.app.IntentService;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Criteria;
@@ -40,6 +43,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private final static String TAG = "MainActivity";
     private final static int REFRESH_MS = 500;
+    private final static String WP_ACTION = "notification-broadcast-addwaypoint";
+    private final static String CRESET_ACTION = "notification-broadcast-resettripmeter";
 
     private GoogleMap mGoogleMap;
     private Menu mOptionsMenu;
@@ -60,7 +65,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private Polyline mPolyline;
     private PolylineOptions mPolylineOptions;
-
 
     private TextView textViewWPCount;
     private TextView textViewSpeed;
@@ -120,6 +124,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         textViewWPLine = (TextView)findViewById(R.id.textview_wp_line);
         textViewTotalDistance = (TextView)findViewById(R.id.textview_total_distance);
         textViewTotalLine = (TextView)findViewById(R.id.textview_total_line);
+
 
         buildNotification();
     }
@@ -281,7 +286,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         if (locationPrevious==null){
             return;
         }
-
         markerCount++;
 
         wpDistance =0;
@@ -292,7 +296,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     }
 
     public void buttonCResetClicked(View view){
-        cResetDistance =0;
+        cResetDistance = 0;
         updateTextViewCResetDistance();
     }
 
@@ -349,17 +353,17 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {
-
+        //TODO! Status changed actions
     }
 
     @Override
     public void onProviderEnabled(String provider) {
-
+        //TODO! Provider enable actions
     }
 
     @Override
     public void onProviderDisabled(String provider) {
-
+        //TODO! Provider disable actions
     }
 
 
@@ -423,18 +427,20 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 getPackageName(), R.layout.notification);
 
         // define intents
-        PendingIntent pIntentAddWaypoint = PendingIntent.getBroadcast(
+        Intent intentAddWaypoint = new Intent(this, NotificationActionService.class).setAction(WP_ACTION);
+        PendingIntent pIntentAddWaypoint = PendingIntent.getService(
                 this,
                 0,
-                new Intent("notification-broadcast-addwaypoint"),
-                0
+                intentAddWaypoint,
+                PendingIntent.FLAG_ONE_SHOT
         );
 
-        PendingIntent pIntentResetTripmeter = PendingIntent.getBroadcast(
+        Intent intentResetTripmeter = new Intent(this, NotificationActionService.class).setAction(CRESET_ACTION);
+        PendingIntent pIntentResetTripmeter = PendingIntent.getService(
                 this,
                 0,
-                new Intent("notification-broadcast-resettripmeter"),
-                0
+                intentResetTripmeter,
+                PendingIntent.FLAG_ONE_SHOT
         );
 
         // bring back already running activity
@@ -459,5 +465,27 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // notify
         mNotificationManager.notify(0, mBuilder.build());
+    }
+
+
+    /**
+     * Inner service class to handle notification pending intents that should invoke
+     * methods of the main activity.
+     */
+    public class NotificationActionService extends IntentService {
+        public NotificationActionService() {
+            super(NotificationActionService.class.getSimpleName());
+        }
+
+        @Override
+        protected void onHandleIntent(Intent intent) {
+            String action = intent.getAction();
+
+            if (action.equals(WP_ACTION)) {
+                buttonAddWayPointClicked(findViewById(R.id.buttonAddWayPoint));
+            } else if (action.equals(CRESET_ACTION)) {
+                buttonCResetClicked(findViewById(R.id.buttonResetTripmeter));
+            }
+        }
     }
 }
