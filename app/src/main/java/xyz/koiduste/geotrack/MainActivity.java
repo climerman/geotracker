@@ -59,8 +59,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private TextView textViewWPCount;
     private TextView textViewSpeed;
     private TextView textViewCResetDistance;
+    private TextView textViewCResetLine;
     private TextView textViewWPDistance;
+    private TextView textViewWPLine;
     private TextView textViewTotalDistance;
+    private TextView textViewTotalLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,8 +108,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         textViewSpeed = (TextView) findViewById(R.id.textview_speed);
 
         textViewCResetDistance = (TextView)findViewById(R.id.textview_creset_distance);
+        textViewCResetLine = (TextView)findViewById(R.id.textview_creset_line);
         textViewWPDistance = (TextView)findViewById(R.id.textview_wp_distance);
+        textViewWPLine = (TextView)findViewById(R.id.textview_wp_line);
         textViewTotalDistance = (TextView)findViewById(R.id.textview_total_distance);
+        textViewTotalLine = (TextView)findViewById(R.id.textview_total_line);
     }
 
     @Override
