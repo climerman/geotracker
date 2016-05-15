@@ -1,7 +1,10 @@
 package xyz.koiduste.geotrack;
 
 import android.Manifest;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Criteria;
@@ -10,12 +13,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.app.NotificationCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -40,6 +45,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private Menu mOptionsMenu;
 
     private LocationManager locationManager;
+    private NotificationManager mNotificationManager;
 
     private String provider;
 
@@ -80,6 +86,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        mNotificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
 
         Criteria criteria = new Criteria();
 
@@ -113,6 +120,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         textViewWPLine = (TextView)findViewById(R.id.textview_wp_line);
         textViewTotalDistance = (TextView)findViewById(R.id.textview_total_distance);
         textViewTotalLine = (TextView)findViewById(R.id.textview_total_line);
+
+        buildNotification();
     }
 
     @Override
@@ -223,8 +232,6 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             mPolylineOptions = new PolylineOptions().width(5).color(Color.RED);
             mPolyline = mGoogleMap.addPolyline(mPolylineOptions);
         }
-
-
     }
 
     private void updateMapType() {
@@ -408,5 +415,49 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private void updateSpeed() {
         textViewSpeed.setText(String.valueOf(Math.round(stepDistance/(REFRESH_MS * 0.001))));
+    }
+
+    public void buildNotification() {
+        // get the view layout
+        RemoteViews remoteView = new RemoteViews(
+                getPackageName(), R.layout.notification);
+
+        // define intents
+        PendingIntent pIntentAddWaypoint = PendingIntent.getBroadcast(
+                this,
+                0,
+                new Intent("notification-broadcast-addwaypoint"),
+                0
+        );
+
+        PendingIntent pIntentResetTripmeter = PendingIntent.getBroadcast(
+                this,
+                0,
+                new Intent("notification-broadcast-resettripmeter"),
+                0
+        );
+
+        // bring back already running activity
+        // in manifest set android:launchMode="singleTop"
+        PendingIntent pIntentOpenActivity = PendingIntent.getActivity(
+                this,
+                0,
+                new Intent(this, MainActivity.class),
+                PendingIntent.FLAG_UPDATE_CURRENT
+        );
+
+        // attach events
+        remoteView.setOnClickPendingIntent(R.id.buttonAddWayPoint, pIntentAddWaypoint);
+        remoteView.setOnClickPendingIntent(R.id.buttonResetTripmeter, pIntentResetTripmeter);
+        remoteView.setOnClickPendingIntent(R.id.buttonOpenActivity, pIntentOpenActivity);
+
+        // build notification
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(this)
+                        .setContent(remoteView)
+                        .setSmallIcon(R.drawable.ic_my_location_white_48dp);
+
+        // notify
+        mNotificationManager.notify(0, mBuilder.build());
     }
 }
