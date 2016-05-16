@@ -488,7 +488,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @SuppressLint("DefaultLocale")
     private void updateSpeed() {
-        textViewSpeed.setText(String.format("%d:%d", (int)Math.floor(getSecondsPerKm()/60), (int)(getSecondsPerKm()-Math.floor(getSecondsPerKm()/60))));
+        textViewSpeed.setText(String.format("%d:%d", (int)Math.floor(getSecondsPerKm()/60), (int)(getSecondsPerKm()-Math.floor(getSecondsPerKm()/60)*60)));
     }
 
     private int getSecondsPerKm() {
