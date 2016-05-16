@@ -46,7 +46,7 @@
         android:layout_toLeftOf="@+id/buttonResetTripmeter"
         android:layout_toStartOf="@+id/buttonResetTripmeter"
         android:paddingRight="10dp"
-        android:text="12 345"
+        android:text="0"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="#000000" />
 
@@ -58,7 +58,7 @@
         android:layout_toLeftOf="@+id/buttonAddWayPoint"
         android:layout_toStartOf="@+id/buttonAddWayPoint"
         android:paddingRight="10dp"
-        android:text="12 345"
+        android:text="0"
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="#000000" />
 

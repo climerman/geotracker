@@ -1,7 +1,9 @@
 package xyz.koiduste.geotrack;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.IntentService;
+import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -40,7 +42,7 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, LocationListener {
-
+    //region variables
     private final static String TAG = "MainActivity";
     private final static int REFRESH_MS = 500;
     private final static String WP_ACTION = "notification-broadcast-addwaypoint";
@@ -51,17 +53,29 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     private LocationManager locationManager;
     private NotificationManager mNotificationManager;
+    private BroadcastReceiver mBroadcastReceiver;
 
-    private String provider;
+    private NotificationCompat.Builder mBuilder;
+    private RemoteViews mRemoteViews;
+
+    private String provider = "";
 
     private int markerCount = 0;
     private Location locationPrevious;
+    private Location startLocation;
+    private Location lastResetLocation;
+    private Location lastWaypointLocation;
 
-    private double stepDistance;
-    private double totalDistance;
-    private double wpDistance;
-    private double cResetDistance;
+    private double stepDistance = 0.;
 
+    private double totalDistance = 0.;
+    private double totalLine = 0.;
+
+    private double wpDistance = 0.;
+    private double wpLine = 0.;
+
+    private double cResetDistance = 0.;
+    private double cResetLine = 0.;
 
     private Polyline mPolyline;
     private PolylineOptions mPolylineOptions;
@@ -74,6 +88,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private TextView textViewWPLine;
     private TextView textViewTotalDistance;
     private TextView textViewTotalLine;
+    //endregion
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,21 +124,46 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         }
 
         locationPrevious = locationManager.getLastKnownLocation(provider);
+        lastResetLocation = locationPrevious;
+        lastWaypointLocation = locationPrevious;
+        startLocation = locationPrevious;
 
         if (locationPrevious != null) {
             // do something with initial position?
         }
 
 
+        //region Gauges
         textViewWPCount = (TextView) findViewById(R.id.textview_wpcount);
         textViewSpeed = (TextView) findViewById(R.id.textview_speed);
 
         textViewCResetDistance = (TextView)findViewById(R.id.textview_creset_distance);
         textViewCResetLine = (TextView)findViewById(R.id.textview_creset_line);
+
         textViewWPDistance = (TextView)findViewById(R.id.textview_wp_distance);
         textViewWPLine = (TextView)findViewById(R.id.textview_wp_line);
+
         textViewTotalDistance = (TextView)findViewById(R.id.textview_total_distance);
         textViewTotalLine = (TextView)findViewById(R.id.textview_total_line);
+        //endregion
+
+        //region Broadcast Receiver
+        mBroadcastReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if (intent.getAction().equals(WP_ACTION))
+                    buttonAddWayPointClicked(findViewById(R.id.buttonAddWayPoint));
+                if (intent.getAction().equals(CRESET_ACTION))
+                    buttonCResetClicked(findViewById(R.id.buttonResetTripmeter));
+            }
+        };
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(WP_ACTION);
+        intentFilter.addAction(CRESET_ACTION);
+
+        registerReceiver(mBroadcastReceiver, intentFilter);
+        //endregion
 
 
         buildNotification();
@@ -282,22 +322,32 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mGoogleMap.setMyLocationEnabled(false);
     }
 
+    @SuppressLint("DefaultLocale")
     public void buttonAddWayPointClicked(View view){
         if (locationPrevious==null){
             return;
         }
         markerCount++;
 
-        wpDistance =0;
+
+        wpDistance = 0;
+        wpLine = 0;
         updateTextViewWPDistance();
+        mNotificationManager.notify(0, mBuilder.build());
+
+        lastWaypointLocation = locationPrevious;
 
         mGoogleMap.addMarker(new MarkerOptions().position(new LatLng(locationPrevious.getLatitude(), locationPrevious.getLongitude())).title(Integer.toString(markerCount)));
-        textViewWPCount.setText(Integer.toString(markerCount));
+        textViewWPCount.setText(String.format("%d", markerCount));
     }
 
     public void buttonCResetClicked(View view){
         cResetDistance = 0;
+        cResetLine = 0;
         updateTextViewCResetDistance();
+        mNotificationManager.notify(0, mBuilder.build());
+
+        lastResetLocation = locationPrevious;
     }
 
     @Override
@@ -344,8 +394,14 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         updateSpeed();
 
         totalDistance+=stepDistance;
+        totalLine = startLocation.distanceTo(location);
+
         cResetDistance +=stepDistance;
+        cResetLine = lastResetLocation.distanceTo(location);
+
         wpDistance +=stepDistance;
+        wpLine = lastWaypointLocation.distanceTo(location);
+
         updateAllDistanceTextViews();
 
         locationPrevious = location;
@@ -403,44 +459,62 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         updateTextViewCResetDistance();
         updateTextViewWPDistance();
         updateTextViewTotalDistance();
+        mNotificationManager.notify(0, mBuilder.build());
     }
 
+    @SuppressLint("DefaultLocale")
     private void updateTextViewCResetDistance() {
-        textViewCResetDistance.setText(String.valueOf(Math.round(cResetDistance)));
+        textViewCResetDistance.setText(String.format("%.2f",cResetDistance));
+        textViewCResetLine.setText(String.format("%.2f", cResetLine));
     }
 
+    @SuppressLint("DefaultLocale")
     private void updateTextViewWPDistance() {
-        textViewWPDistance.setText(String.valueOf(Math.round(wpDistance)));
+        textViewWPDistance.setText(String.format("%.2f", wpDistance));
+        //textViewWaypointMetrics.setText(String.format("%.2f", wpDistance));
+        textViewWPLine.setText(String.format("%.2f", wpLine));
+
+        mRemoteViews.setTextViewText(R.id.textViewWayPointMetrics, String.format("%.2f", wpDistance));
     }
 
+    @SuppressLint("DefaultLocale")
     private void updateTextViewTotalDistance() {
-        textViewTotalDistance.setText(String.valueOf(Math.round(totalDistance)));
+        textViewTotalDistance.setText(String.format("%.2f",totalDistance));
+        //textViewTripmeterMetrics.setText(String.format("%.2f", totalDistance));
+        textViewTotalLine.setText(String.format("%.2f",totalLine));
+
+        mRemoteViews.setTextViewText(R.id.textViewTripmeterMetrics, String.format("%.2f", totalDistance));
     }
 
+    @SuppressLint("DefaultLocale")
     private void updateSpeed() {
-        textViewSpeed.setText(String.valueOf(Math.round(stepDistance/(REFRESH_MS * 0.001))));
+        textViewSpeed.setText(String.format("%d:%d", (int)Math.floor(getSecondsPerKm()/60), (int)(getSecondsPerKm()-Math.floor(getSecondsPerKm()/60))));
+    }
+
+    private int getSecondsPerKm() {
+        return Math.round(1000/locationPrevious.getSpeed());
     }
 
     public void buildNotification() {
         // get the view layout
-        RemoteViews remoteView = new RemoteViews(
+        mRemoteViews = new RemoteViews(
                 getPackageName(), R.layout.notification);
 
         // define intents
-        Intent intentAddWaypoint = new Intent(this, NotificationActionService.class).setAction(WP_ACTION);
+        //Intent intentAddWaypoint = new Intent(this, NotificationActionService.class).setAction(WP_ACTION);
         PendingIntent pIntentAddWaypoint = PendingIntent.getService(
                 this,
                 0,
-                intentAddWaypoint,
-                PendingIntent.FLAG_ONE_SHOT
+                new Intent(WP_ACTION),
+                0
         );
 
-        Intent intentResetTripmeter = new Intent(this, NotificationActionService.class).setAction(CRESET_ACTION);
+        //Intent intentResetTripmeter = new Intent(this, NotificationActionService.class).setAction(CRESET_ACTION);
         PendingIntent pIntentResetTripmeter = PendingIntent.getService(
                 this,
                 0,
-                intentResetTripmeter,
-                PendingIntent.FLAG_ONE_SHOT
+                new Intent(CRESET_ACTION),
+                0
         );
 
         // bring back already running activity
@@ -453,39 +527,19 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         );
 
         // attach events
-        remoteView.setOnClickPendingIntent(R.id.buttonAddWayPoint, pIntentAddWaypoint);
-        remoteView.setOnClickPendingIntent(R.id.buttonResetTripmeter, pIntentResetTripmeter);
-        remoteView.setOnClickPendingIntent(R.id.buttonOpenActivity, pIntentOpenActivity);
+        mRemoteViews.setOnClickPendingIntent(R.id.buttonAddWayPoint, pIntentAddWaypoint);
+        mRemoteViews.setOnClickPendingIntent(R.id.buttonResetTripmeter, pIntentResetTripmeter);
+        mRemoteViews.setOnClickPendingIntent(R.id.buttonOpenActivity, pIntentOpenActivity);
+        mRemoteViews.setTextViewText(R.id.textViewTripmeterMetrics, "0");
+        mRemoteViews.setTextViewText(R.id.textViewWayPointMetrics, "0");
 
         // build notification
-        NotificationCompat.Builder mBuilder =
+        mBuilder =
                 new NotificationCompat.Builder(this)
-                        .setContent(remoteView)
+                        .setContent(mRemoteViews)
                         .setSmallIcon(R.drawable.ic_my_location_white_48dp);
 
         // notify
         mNotificationManager.notify(0, mBuilder.build());
-    }
-
-
-    /**
-     * Inner service class to handle notification pending intents that should invoke
-     * methods of the main activity.
-     */
-    public class NotificationActionService extends IntentService {
-        public NotificationActionService() {
-            super(NotificationActionService.class.getSimpleName());
-        }
-
-        @Override
-        protected void onHandleIntent(Intent intent) {
-            String action = intent.getAction();
-
-            if (action.equals(WP_ACTION)) {
-                buttonAddWayPointClicked(findViewById(R.id.buttonAddWayPoint));
-            } else if (action.equals(CRESET_ACTION)) {
-                buttonCResetClicked(findViewById(R.id.buttonResetTripmeter));
-            }
-        }
     }
 }
