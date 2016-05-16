@@ -91,24 +91,24 @@
             <TableRow>
 
                 <TextView
-                    android:layout_width="80dp"
+                    android:layout_width="40dp"
                     android:layout_marginLeft="4dp"
                     android:text="" />
 
                 <TextView
-                    android:layout_width="80dp"
+                    android:layout_width="60dp"
                     android:layout_gravity="right"
                     android:layout_marginLeft="4dp"
                     android:text="CReset" />
 
                 <TextView
-                    android:layout_width="80dp"
+                    android:layout_width="60dp"
                     android:layout_gravity="right"
                     android:layout_marginLeft="4dp"
                     android:text="WayPoint" />
 
                 <TextView
-                    android:layout_width="80dp"
+                    android:layout_width="60dp"
                     android:layout_gravity="right"
                     android:layout_marginLeft="4dp"
                     android:text="Total" />
