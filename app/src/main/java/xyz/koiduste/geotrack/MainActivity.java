@@ -502,7 +502,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         // define intents
         //Intent intentAddWaypoint = new Intent(this, NotificationActionService.class).setAction(WP_ACTION);
-        PendingIntent pIntentAddWaypoint = PendingIntent.getService(
+        PendingIntent pIntentAddWaypoint = PendingIntent.getBroadcast(
                 this,
                 0,
                 new Intent(WP_ACTION),
@@ -510,7 +510,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         );
 
         //Intent intentResetTripmeter = new Intent(this, NotificationActionService.class).setAction(CRESET_ACTION);
-        PendingIntent pIntentResetTripmeter = PendingIntent.getService(
+        PendingIntent pIntentResetTripmeter = PendingIntent.getBroadcast(
                 this,
                 0,
                 new Intent(CRESET_ACTION),
@@ -537,7 +537,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mBuilder =
                 new NotificationCompat.Builder(this)
                         .setContent(mRemoteViews)
-                        .setSmallIcon(R.drawable.ic_my_location_white_48dp);
+                        .setSmallIcon(R.drawable.ic_my_location_white_48dp)
+                        .setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
 
         // notify
         mNotificationManager.notify(0, mBuilder.build());
